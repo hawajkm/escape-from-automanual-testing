@@ -77,7 +77,9 @@ def test_sort_a_list(lst):
     # Note: Even before the assertion, we're checking that `sort_a_list`
     #       doesn't raise an exception for any list of integers! This is
     #       a form of testing in its own right!
-    new = sort_a_list(lst.copy())
+    # hawajkm: copy support is super finicky
+    #new = sort_a_list(lst.copy())
+    new = sort_a_list(lst[:])
     assert Counter(lst) == Counter(new)  # sorted list must have same elements
     # TODO: assert that the list is in correct order
 
@@ -180,7 +182,9 @@ def leftpad(string, width, fillchar):
     'Dog'
     """
     assert isinstance(width, int) and width >= 0, width
-    assert isinstance(fillchar, str) and len(fillchar) == 1, fillchar
+    # hawajkm: yay! python2.7
+    #assert isinstance(fillchar, str) and len(fillchar) == 1, fillchar
+    assert isinstance(fillchar, type(u'')) and len(fillchar) == 1, fillchar
     return string  # Uh oh, we haven't padded this at all!
 
 
@@ -188,7 +192,9 @@ def leftpad(string, width, fillchar):
 def test_leftpad(string, width, fillchar):
     # TODO: allow any length from zero up to e.g. 1000 (capped for performance)
     padded = leftpad(string, width, fillchar)
-    assert isinstance(padded, str), padded
+    # hawajkm: Moar python2.7
+    #assert isinstance(padded, str), padded
+    assert isinstance(padded, type(u'')), padded
     # TODO: Add assertions about the properties described above.
     #       Avoid using redundant code/logic between your test
     #       and the function that you are writing - they may have
