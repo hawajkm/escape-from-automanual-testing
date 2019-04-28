@@ -63,28 +63,33 @@ class DieHardProblem(RuleBasedStateMachine):
 
     @rule()
     def fill_small(self):
-        pass
+        self.small = SMALL_JUG_CAPACITY
 
     @rule()
     def fill_large(self):
-        pass
+        self.large = LARGE_JUG_CAPACITY
 
     @rule()
     def empty_small(self):
-        pass
+        self.small = 0
 
     @rule()
     def empty_large(self):
-        pass
+        self.large = 0
 
     @rule()
     def pour_small_into_large(self):
-        pass
+        avail = LARGE_JUG_CAPACITY - self.large
+        avail = min(self.small, avail)
+        self.large += avail
+        self.small -= avail
 
     @rule()
     def pour_large_into_small(self):
-        pass
-
+        avail = SMALL_JUG_CAPACITY - self.small
+        avail = min(self.large, avail)
+        self.small += avail
+        self.large -= avail
 
 # The `.TestCase` attribute of a StateMachine is an automatically created
 # unittest.TestCase, so assigning to a global variable ending in "Test"
@@ -139,11 +144,27 @@ class HanoiPuzzle(object):
         source, dest = getattr(self, source), getattr(self, dest)
         dest.append(source.pop())
 
+def check_precondition(src, dest):
+    can_move = True
+
+    # Source is not empty
+    can_move = can_move and len(src) > 0
+
+    # Destination last element is less than what we are moving
+    can_move = can_move and (len(dest) == 0 or \
+                                     (src[-1] < dest[-1]))
+
+    return can_move
 
 class HanoiSolver(RuleBasedStateMachine):
     def __init__(self):
-        super().__init__()
+        #super(RuleBasedStateMachine, self).__init__()
+        RuleBasedStateMachine.__init__(self)
         self.hanoi = HanoiPuzzle(3)
+
+        self.A = self.hanoi.A
+        self.B = self.hanoi.B
+        self.C = self.hanoi.C
 
     @invariant()
     def puzzle_not_solved(self):
@@ -157,15 +178,37 @@ class HanoiSolver(RuleBasedStateMachine):
     # to avoid making any invalid moves.  You may want to define a helper
     # function to make this less verbose!
 
-    @precondition(lambda self: ...)
+    @precondition(lambda self: check_precondition(self.A, self.B))
     @rule()
     def move_A_to_B(self):
-        # TODO: Move A to B, not this no-op.
-        self.hanoi.move("A", "A")
+        self.hanoi.move("A", "B")
 
+    @precondition(lambda self: check_precondition(self.A, self.C))
+    @rule()
+    def move_A_to_C(self):
+        self.hanoi.move("A", "C")
+
+    @precondition(lambda self: check_precondition(self.B, self.A))
+    @rule()
+    def move_B_to_A(self):
+        self.hanoi.move("B", "A")
+
+    @precondition(lambda self: check_precondition(self.B, self.C))
+    @rule()
+    def move_B_to_C(self):
+        self.hanoi.move("B", "C")
+
+    @precondition(lambda self: check_precondition(self.C, self.A))
+    @rule()
+    def move_C_to_A(self):
+        self.hanoi.move("C", "A")
+
+    @precondition(lambda self: check_precondition(self.C, self.B))
+    @rule()
+    def move_C_to_B(self):
+        self.hanoi.move("C", "B")
 
 HanoiTest = HanoiSolver.TestCase
-
 
 ##############################################################################
 # Metamorphic testing and statistics demo: how hard can mean() be anyway?
