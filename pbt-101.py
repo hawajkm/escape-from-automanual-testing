@@ -23,6 +23,7 @@ from collections import Counter
 
 import pytest
 
+import hypothesis
 from hypothesis import given, strategies as st
 
 
@@ -44,7 +45,8 @@ def sort_a_list(lst):
     # TODO: After fixing the tests, fix this function.
     #       You may use a builtin function  OR write
     #       a sort function yourself.
-    return lst[::-1]
+    #return lst[::-1]
+    return sorted(lst)
 
 
 def test_sort_a_list_basic():
@@ -77,11 +79,10 @@ def test_sort_a_list(lst):
     # Note: Even before the assertion, we're checking that `sort_a_list`
     #       doesn't raise an exception for any list of integers! This is
     #       a form of testing in its own right!
-    # hawajkm: copy support is super finicky
-    #new = sort_a_list(lst.copy())
     new = sort_a_list(lst[:])
     assert Counter(lst) == Counter(new)  # sorted list must have same elements
     # TODO: assert that the list is in correct order
+    assert new == sorted(new)
 
 
 """
@@ -117,7 +118,7 @@ https://hypothesis.readthedocs.io/en/latest/data.html#hypothesis.strategies.list
 """
 
 
-@given(st.just([1, 2, 3]))  # update this search strategy to be more-general
+@given(lst=st.lists(st.integers(min_value=1), min_size=2))  # update this search strategy to be more-general
 def test_sum_of_list_greater_than_max(lst):
     # TODO: *without* changing the test body, write the most general
     #       argument to @given that will pass for lists of integers.
@@ -182,9 +183,7 @@ def leftpad(string, width, fillchar):
     'Dog'
     """
     assert isinstance(width, int) and width >= 0, width
-    # hawajkm: yay! python2.7
-    #assert isinstance(fillchar, str) and len(fillchar) == 1, fillchar
-    assert isinstance(fillchar, type(u'')) and len(fillchar) == 1, fillchar
+    assert isinstance(fillchar, type(u"")) and len(fillchar) == 1, fillchar
     return string  # Uh oh, we haven't padded this at all!
 
 
@@ -192,9 +191,7 @@ def leftpad(string, width, fillchar):
 def test_leftpad(string, width, fillchar):
     # TODO: allow any length from zero up to e.g. 1000 (capped for performance)
     padded = leftpad(string, width, fillchar)
-    # hawajkm: Moar python2.7
-    #assert isinstance(padded, str), padded
-    assert isinstance(padded, type(u'')), padded
+    assert isinstance(padded, type(u"")), padded
     # TODO: Add assertions about the properties described above.
     #       Avoid using redundant code/logic between your test
     #       and the function that you are writing - they may have
@@ -254,16 +251,48 @@ Follow these steps:
    you'll therefore need to restrict the recursive strategy a little.
 """
 
+def constant_helper(const):
+
+  const = const.lower().strip()
+
+  print('constant = ' + const)
+
+  if   const == '-infinity':
+    return float('-inf')
+
+  elif const == 'infinity':
+    return float('inf')
+
+  elif const == 'nan':
+    return float('NaN')
+
+  elif const == 'true':
+    return True
+
+  elif const == 'false':
+    return False
+
+  elif const == 'none':
+    return None
+
+  elif const == 'null':
+    return None
+
 
 class Record(object):
     # If you don't like writing out the special __methods__, this class
     # would be a great fit for the `attrs` package or `dataclasses`!
 
+    decoder = json.JSONDecoder(parse_int     = int            ,
+                               parse_float   = float          ,
+                               parse_constant= constant_helper)
+
     def __init__(self, value):
         self.value = value
 
     def __repr__(self):
-        return "Record(value={!r})".format(self.value)
+        #return "Record(value={!r})".format(self.value)
+        return json.dumps(self.value, indent=4)
 
     def __eq__(self, other):
         return type(self) == type(other) and self.value == other.value
@@ -278,13 +307,20 @@ class Record(object):
 
         This is a *bad* method. This needs to be fixed
         """
-        value = string
+        value = cls.decoder.decode(string)
         return cls(value)
 
 
 # We can define recursive strategies like so:
+
+none     = st.none()
+booleans = st.booleans()
+integers = st.integers()
+floats   = st.floats(allow_infinity=False, allow_nan=False)
+texts    = st.text()
+
 json_strat = st.recursive(
-    st.none() | st.booleans() | st.integers() | st.floats() | st.text(),
+    none | booleans | integers | floats | texts,
     lambda substrat: st.lists(substrat) | st.dictionaries(st.text(), substrat),
 )
 
@@ -293,9 +329,11 @@ json_strat = st.recursive(
 # In this one-argument case, we could also use `json_strat.map(Record)`.
 @given(st.builds(Record, value=json_strat))
 def test_record_json_roundtrip(record):
+    #hypothesis.assume(record == record)
     string = record.to_json()
     new = Record.from_json(string)
     # TODO: assert that the new and old records match
+    assert new == record
 
 
 # Extension option: imagine that we are sending serialised records to an
